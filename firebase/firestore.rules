@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isApproved() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.is_approved == true &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.is_banned == false;
+    }
+
+    function isAdmin() {
+      return isApproved() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // ユーザー
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if false;
+    }
+
+    // チャンネル
+    match /channels/{channelId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    // メッセージ
+    match /messages/{messageId} {
+      allow read: if isApproved();
+      allow create: if isApproved() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.is_muted == false;
+      allow update: if isApproved() &&
+        (request.auth.uid == resource.data.authorId || isAdmin());
+      allow delete: if isAdmin() || request.auth.uid == resource.data.authorId;
+    }
+
+    // 下書き
+    match /drafts/{draftId} {
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated();
+    }
+
+    // Wiki
+    match /wikiPages/{pageId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /wikiRevisions/{revisionId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+    }
+
+    // イベント
+    match /events/{eventId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin() || request.auth.uid == resource.data.createdBy;
+    }
+
+    // 投票
+    match /polls/{pollId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin() || request.auth.uid == resource.data.createdBy;
+    }
+
+    // 物品管理
+    match /inventory/{itemId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /inventoryLogs/{logId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+    }
+
+    // DM
+    match /dmConversations/{convId} {
+      allow read: if isApproved() &&
+        request.auth.uid in resource.data.participants;
+      allow create: if isApproved();
+      allow update: if isApproved() &&
+        request.auth.uid in resource.data.participants;
+    }
+
+    match /dmMessages/{msgId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved() &&
+        request.auth.uid == resource.data.senderId;
+    }
+
+    // 通知
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isApproved();
+      allow update: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+    }
+
+    // 招待コード
+    match /inviteCodes/{codeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAuthenticated();
+    }
+
+    // 承認リクエスト
+    match /approvalRequests/{reqId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+    }
+
+    // カスタムロール
+    match /customRoles/{roleId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

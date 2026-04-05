@@ -1,0 +1,9 @@
+{
+  "name": "PhysicsHub - 海城物理部SNS",
+  "short_name": "PhysicsHub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1021",
+  "theme_color": "#3b82f6",
+  "icons": []
+}
