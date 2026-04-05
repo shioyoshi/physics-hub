@@ -1,6 +1,7 @@
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import {
@@ -21,12 +22,16 @@ const ALLOWED_DOMAINS = ["stu.kaijo.ed.jp", "gfe.kaijo.ed.jp"];
 
 const googleProvider = new GoogleAuthProvider();
 
-// ← hd は削除（不具合の原因になることがある）
-// googleProvider.setCustomParameters({ hd: "kaijo.ed.jp" });
+export async function signInWithGoogle() {
+  await signInWithRedirect(auth, googleProvider);
+}
 
-export async function signInWithGoogle(): Promise<User> {
+// 🔥 redirect後に呼ばれる
+export async function handleRedirectResult(): Promise<User | null> {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+
     const firebaseUser = result.user;
 
     console.log("Firebase User:", firebaseUser);
